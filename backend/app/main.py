@@ -1,14 +1,16 @@
 """
 Dhanvantari Ayurveda Care Platform — FastAPI Application
 """
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.core.database import engine, Base
-from app.api.routes import auth, practitioners, patients, plans, checkins, portal, ai, billing, supplements, recipes
+from app.api.routes import auth, practitioners, patients, plans, checkins, portal, ai, billing, supplements, recipes, followups
 
 
 @asynccontextmanager
@@ -44,15 +46,22 @@ app.add_middleware(
 app.include_router(auth.router,          prefix="/api/auth",         tags=["auth"])
 app.include_router(practitioners.router, prefix="/api/practitioners", tags=["practitioners"])
 app.include_router(patients.router,      prefix="/api/patients",      tags=["patients"])
-app.include_router(plans.router,         prefix="/api/plans",         tags=["plans"])
+app.include_router(plans.router,         prefix="/api",               tags=["plans"])
 app.include_router(supplements.router,   prefix="/api/supplements",   tags=["supplements"])
 app.include_router(recipes.router,       prefix="/api/recipes",       tags=["recipes"])
-app.include_router(checkins.router,      prefix="/api/checkins",      tags=["checkins"])
+app.include_router(checkins.router,      prefix="/api",               tags=["checkins"])
 app.include_router(portal.router,        prefix="/api/portal",        tags=["portal"])
 app.include_router(ai.router,            prefix="/api/ai",            tags=["ai"])
 app.include_router(billing.router,       prefix="/api/billing",       tags=["billing"])
+app.include_router(followups.router,     prefix="/api/followups",      tags=["followups"])
 
 
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "version": settings.APP_VERSION}
+
+
+# ── Static files (logo uploads) ───────────────────────────────────────────────
+_upload_dir = settings.STORAGE_LOCAL_PATH
+os.makedirs(_upload_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=_upload_dir), name="uploads")
