@@ -17,6 +17,20 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  async function tryDemo() {
+    setError("");
+    setLoading(true);
+    try {
+      const { data } = await authApi.login({ email: "demo@dhanvantari.app", password: "demo1234" });
+      setAuth(data.practitioner, data.access_token, data.refresh_token);
+      router.push("/dashboard");
+    } catch {
+      setError("Demo login unavailable. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -87,6 +101,26 @@ export default function LoginPage() {
           {loading ? "Signing in…" : "Sign in"}
         </Button>
       </form>
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-background px-2 text-muted-foreground">or</span>
+        </div>
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        size="lg"
+        disabled={loading}
+        onClick={tryDemo}
+      >
+        Try Demo
+      </Button>
 
       <p className="text-sm text-center text-muted-foreground">
         New practitioner?{" "}
