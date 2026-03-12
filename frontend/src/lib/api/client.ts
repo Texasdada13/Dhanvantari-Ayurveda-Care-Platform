@@ -3,7 +3,7 @@
  */
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8747";
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -70,43 +70,75 @@ api.interceptors.response.use(
   }
 );
 
-// ── Typed API helpers ─────────────────────────────────────────────────────
+// ── API helpers ───────────────────────────────────────────────────────────
 
 export const authApi = {
-  register:     (data: Record<string, unknown>) => api.post("/api/auth/register", data),
-  login:        (data: Record<string, unknown>) => api.post("/api/auth/login", data),
-  me:           ()                              => api.get("/api/auth/me"),
+  register: (data: Record<string, unknown>) => api.post("/api/auth/register", data),
+  login:    (data: Record<string, unknown>) => api.post("/api/auth/login", data),
+  me:       ()                              => api.get("/api/auth/me"),
+};
+
+export const practitionersApi = {
+  getMe:   ()              => api.get("/api/practitioners/me"),
+  patchMe: (data: unknown) => api.patch("/api/practitioners/me", data),
 };
 
 export const patientsApi = {
-  list:               ()               => api.get("/api/patients"),
-  get:                (id: number)     => api.get(`/api/patients/${id}`),
-  create:             (data: unknown)  => api.post("/api/patients", data),
-  update:             (id: number, data: unknown) => api.patch(`/api/patients/${id}`, data),
-  updateHealthProfile:(id: number, data: unknown) => api.patch(`/api/patients/${id}/health-profile`, data),
+  list:                ()                          => api.get("/api/patients"),
+  get:                 (id: number)                => api.get(`/api/patients/${id}`),
+  create:              (data: unknown)             => api.post("/api/patients", data),
+  update:              (id: number, data: unknown) => api.patch(`/api/patients/${id}`, data),
+  updateHealthProfile: (id: number, data: unknown) => api.patch(`/api/patients/${id}/health-profile`, data),
+  deactivate:          (id: number)                => api.delete(`/api/patients/${id}`),
 };
 
 export const plansApi = {
-  get:             (patientId: number)              => api.get(`/api/patients/${patientId}/plan`),
-  create:          (patientId: number, data: unknown) => api.post(`/api/patients/${patientId}/plan`, data),
-  addSupplement:   (patientId: number, data: unknown) => api.post(`/api/patients/${patientId}/plan/supplements`, data),
-  removeSupplement:(psId: number)                   => api.delete(`/api/plans/supplements/${psId}`),
-  addRecipe:       (patientId: number, data: unknown) => api.post(`/api/patients/${patientId}/plan/recipes`, data),
-  removeRecipe:    (prId: number)                   => api.delete(`/api/plans/recipes/${prId}`),
+  get:              (patientId: number)               => api.get(`/api/patients/${patientId}/plan`),
+  create:           (patientId: number, data: unknown) => api.post(`/api/patients/${patientId}/plan`, data),
+  update:           (patientId: number, data: unknown) => api.patch(`/api/patients/${patientId}/plan`, data),
+  addSupplement:    (patientId: number, data: unknown) => api.post(`/api/patients/${patientId}/plan/supplements`, data),
+  removeSupplement: (psId: number)                    => api.delete(`/api/plans/supplements/${psId}`),
+  addRecipe:        (patientId: number, data: unknown) => api.post(`/api/patients/${patientId}/plan/recipes`, data),
+  removeRecipe:     (prId: number)                    => api.delete(`/api/plans/recipes/${prId}`),
+};
+
+export const supplementsApi = {
+  list: (params?: { search?: string; category?: string; dosha?: string }) =>
+    api.get("/api/supplements", { params }),
+  get: (id: number) => api.get(`/api/supplements/${id}`),
+};
+
+export const recipesApi = {
+  list: (params?: { search?: string; meal_type?: string; dosha?: string }) =>
+    api.get("/api/recipes", { params }),
+  get: (id: number) => api.get(`/api/recipes/${id}`),
+};
+
+export const checkinsApi = {
+  list: (patientId: number, limit = 30) =>
+    api.get(`/api/patients/${patientId}/checkins`, { params: { limit } }),
+};
+
+export const followupsApi = {
+  list:   (params?: { completed?: boolean; patient_id?: number }) =>
+    api.get("/api/followups", { params }),
+  create: (data: unknown)             => api.post("/api/followups", data),
+  update: (id: number, data: unknown) => api.patch(`/api/followups/${id}`, data),
+  delete: (id: number)                => api.delete(`/api/followups/${id}`),
 };
 
 export const aiApi = {
-  chat:       (data: unknown)      => api.post("/api/ai/chat", data),
-  draftPlan:  (patientId: number)  => api.post(`/api/ai/draft-plan/${patientId}`, {}),
-  insights:   (patientId: number)  => api.get(`/api/ai/insights/${patientId}`),
+  chat:      (data: unknown)     => api.post("/api/ai/chat", data),
+  draftPlan: (patientId: number) => api.post(`/api/ai/draft-plan/${patientId}`, {}),
+  insights:  (patientId: number) => api.get(`/api/ai/insights/${patientId}`),
 };
 
 export const portalApi = {
-  home:      (token: string) => api.get(`/api/portal/${token}`),
-  plan:      (token: string) => api.get(`/api/portal/${token}/plan`),
-  history:   (token: string) => api.get(`/api/portal/${token}/history`),
+  home:      (token: string)               => api.get(`/api/portal/${token}`),
+  plan:      (token: string)               => api.get(`/api/portal/${token}/plan`),
+  history:   (token: string)               => api.get(`/api/portal/${token}/history`),
   checkin:   (token: string, data: unknown) => api.post(`/api/portal/${token}/checkin`, data),
-  followups: (token: string) => api.get(`/api/portal/${token}/followups`),
+  followups: (token: string)               => api.get(`/api/portal/${token}/followups`),
 };
 
 export const billingApi = {

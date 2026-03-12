@@ -9,6 +9,7 @@ import {
   CalendarCheck,
   Leaf,
   UtensilsCrossed,
+  Wind,
   Settings,
   LogOut,
   Menu,
@@ -24,6 +25,7 @@ const NAV = [
   { href: "/followups",   label: "Follow-ups",   icon: CalendarCheck },
   { href: "/supplements", label: "Supplements",  icon: Leaf },
   { href: "/recipes",     label: "Recipes",      icon: UtensilsCrossed },
+  { href: "/pranayama",   label: "Pranayama",    icon: Wind },
   { href: "/settings",    label: "Settings",     icon: Settings },
 ];
 
