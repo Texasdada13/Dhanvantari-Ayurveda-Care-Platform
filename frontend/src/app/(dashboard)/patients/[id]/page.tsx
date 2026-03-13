@@ -5,7 +5,7 @@ import { use } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, ExternalLink, Save, FileText, Sparkles, Send, ChevronLeft, Loader2 } from "lucide-react";
-import { patientsApi, plansApi, checkinsApi, followupsApi, supplementsApi, recipesApi, notesApi } from "@/lib/api/client";
+import { patientsApi, plansApi, checkinsApi, followupsApi, supplementsApi, recipesApi, notesApi, assessmentsApi } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,8 +14,23 @@ import { Select } from "@/components/ui/select";
 import { Dialog } from "@/components/ui/dialog";
 import { Badge, DoshaBadge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import DoshaAssessmentWizard from "@/components/dosha-assessment-wizard";
 
-type Tab = "overview" | "plan" | "checkins" | "followups" | "notes";
+type Tab = "overview" | "plan" | "checkins" | "followups" | "notes" | "assessment";
+
+type Assessment = {
+  id: number;
+  patient_id: number;
+  prakriti: { vata: number; pitta: number; kapha: number } | null;
+  vikriti: { vata: number; pitta: number; kapha: number } | null;
+  agni_type: string | null;
+  ama_level: string | null;
+  ashtavidha: Record<string, { finding?: string; notes?: string }> | null;
+  result_prakriti: string | null;
+  result_vikriti: string | null;
+  notes: string | null;
+  created_at: string;
+};
 
 const PORTAL_BASE = process.env.NEXT_PUBLIC_API_URL?.replace(":8747", ":3747") ?? "http://localhost:3747";
 
@@ -56,6 +71,13 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
     queryFn: () => notesApi.list(patientId).then((r) => r.data),
     enabled: tab === "notes",
   });
+
+  const { data: assessments = [] } = useQuery<Assessment[]>({
+    queryKey: ["assessments", patientId],
+    queryFn: () => assessmentsApi.list(patientId).then((r) => r.data),
+    enabled: tab === "assessment",
+  });
+  const [showWizard, setShowWizard] = useState(false);
 
   // ── Notes state ─────────────────────────────────────────────────────────
   const [viewingNote, setViewingNote] = useState<Record<string, unknown> | null>(null);
@@ -221,6 +243,7 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
 
   const TABS: { id: Tab; label: string }[] = [
     { id: "overview", label: "Overview" },
+    { id: "assessment", label: "Assessment" },
     { id: "plan", label: "Care Plan" },
     { id: "notes", label: "Notes" },
     { id: "checkins", label: "Check-ins" },
@@ -345,6 +368,146 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                   </div>
                 )}
               </section>
+            )}
+          </div>
+        )}
+
+        {/* ── Assessment ────────────────────────────────────────────────── */}
+        {tab === "assessment" && (
+          <div className="max-w-3xl space-y-5">
+            {showWizard ? (
+              <DoshaAssessmentWizard
+                patientId={patientId}
+                onComplete={() => setShowWizard(false)}
+                onCancel={() => setShowWizard(false)}
+              />
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="font-medium">Dosha Assessments</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {assessments.length} assessment{assessments.length !== 1 ? "s" : ""} on file
+                    </p>
+                  </div>
+                  <Button size="sm" onClick={() => setShowWizard(true)} className="gap-1.5">
+                    <Plus className="size-3.5" /> New Assessment
+                  </Button>
+                </div>
+
+                {assessments.length === 0 ? (
+                  <div className="rounded-xl border bg-card p-8 text-center space-y-3">
+                    <p className="text-sm text-muted-foreground">No dosha assessments yet.</p>
+                    <p className="text-xs text-muted-foreground">Run a structured Prakriti/Vikriti assessment to establish the patient&apos;s constitutional profile.</p>
+                    <Button size="sm" onClick={() => setShowWizard(true)}>Start Assessment</Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {assessments.map((a) => {
+                      const { prakriti, vikriti } = a;
+                      return (
+                        <div key={a.id} className="rounded-xl border bg-card p-5 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(a.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            {/* Prakriti */}
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Prakriti</p>
+                              <p className="text-xl font-semibold text-primary">{a.result_prakriti || "—"}</p>
+                              {prakriti && (
+                                <div className="space-y-1">
+                                  <div className="flex h-2.5 rounded-full overflow-hidden bg-muted">
+                                    {(() => {
+                                      const total = prakriti.vata + prakriti.pitta + prakriti.kapha;
+                                      if (total === 0) return null;
+                                      return (
+                                        <>
+                                          <div className="bg-sky-500" style={{ width: `${(prakriti.vata / total) * 100}%` }} />
+                                          <div className="bg-orange-500" style={{ width: `${(prakriti.pitta / total) * 100}%` }} />
+                                          <div className="bg-emerald-500" style={{ width: `${(prakriti.kapha / total) * 100}%` }} />
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    V:{prakriti.vata} · P:{prakriti.pitta} · K:{prakriti.kapha}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Vikriti */}
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vikriti</p>
+                              <p className="text-xl font-semibold text-primary">{a.result_vikriti || "—"}</p>
+                              {vikriti && (vikriti.vata > 0 || vikriti.pitta > 0 || vikriti.kapha > 0) && (
+                                <div className="space-y-1">
+                                  <div className="flex h-2.5 rounded-full overflow-hidden bg-muted">
+                                    {(() => {
+                                      const total = vikriti.vata + vikriti.pitta + vikriti.kapha;
+                                      if (total === 0) return null;
+                                      return (
+                                        <>
+                                          <div className="bg-sky-500" style={{ width: `${(vikriti.vata / total) * 100}%` }} />
+                                          <div className="bg-orange-500" style={{ width: `${(vikriti.pitta / total) * 100}%` }} />
+                                          <div className="bg-emerald-500" style={{ width: `${(vikriti.kapha / total) * 100}%` }} />
+                                        </>
+                                      );
+                                    })()}
+                                  </div>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    V:{vikriti.vata} · P:{vikriti.pitta} · K:{vikriti.kapha}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Agni & Ama row */}
+                          <div className="grid grid-cols-2 gap-4 pt-2 border-t">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Agni</p>
+                              <p className="text-sm font-medium">{a.agni_type || "—"}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Ama</p>
+                              <p className="text-sm font-medium">{a.ama_level || "—"}</p>
+                            </div>
+                          </div>
+
+                          {/* Ashtavidha summary */}
+                          {a.ashtavidha && Object.keys(a.ashtavidha).length > 0 && (
+                            <div className="pt-2 border-t">
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">8-Fold Exam</p>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                                {Object.entries(a.ashtavidha).map(([key, val]) => (
+                                  val?.finding ? (
+                                    <div key={key}>
+                                      <span className="text-xs text-muted-foreground capitalize">{key}: </span>
+                                      <span className="text-xs">{val.finding}</span>
+                                    </div>
+                                  ) : null
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {a.notes && (
+                            <div className="pt-2 border-t">
+                              <p className="text-xs text-muted-foreground">Notes</p>
+                              <p className="text-sm whitespace-pre-wrap">{a.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

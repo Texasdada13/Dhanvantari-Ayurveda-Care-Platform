@@ -109,9 +109,12 @@ export const supplementsApi = {
 };
 
 export const recipesApi = {
-  list: (params?: { search?: string; meal_type?: string; dosha?: string }) =>
+  list:   (params?: { search?: string; meal_type?: string; dosha?: string; mine?: boolean }) =>
     api.get("/api/recipes", { params }),
-  get: (id: number) => api.get(`/api/recipes/${id}`),
+  get:    (id: number)                => api.get(`/api/recipes/${id}`),
+  create: (data: unknown)             => api.post("/api/recipes", data),
+  update: (id: number, data: unknown) => api.patch(`/api/recipes/${id}`, data),
+  delete: (id: number)                => api.delete(`/api/recipes/${id}`),
 };
 
 export const checkinsApi = {
@@ -149,6 +152,13 @@ export const notesApi = {
   delete:  (patientId: number, noteId: number) => api.delete(`/api/patients/${patientId}/notes/${noteId}`),
   send:    (patientId: number, noteId: number) => api.post(`/api/patients/${patientId}/notes/${noteId}/send`),
   aiDraft: (patientId: number)                => api.post(`/api/patients/${patientId}/notes/ai-draft`, {}),
+};
+
+export const assessmentsApi = {
+  list:   (patientId: number)                => api.get(`/api/patients/${patientId}/assessments`),
+  get:    (patientId: number, id: number)    => api.get(`/api/patients/${patientId}/assessments/${id}`),
+  create: (patientId: number, data: unknown) => api.post(`/api/patients/${patientId}/assessments`, data),
+  delete: (patientId: number, id: number)    => api.delete(`/api/patients/${patientId}/assessments/${id}`),
 };
 
 export const billingApi = {

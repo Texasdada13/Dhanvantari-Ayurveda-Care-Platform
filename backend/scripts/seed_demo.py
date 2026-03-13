@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import bcrypt as _bcrypt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, selectinload
 
 from app.core.config import settings
 from app.core.database import Base
@@ -25,6 +25,7 @@ from app.models.patient import Patient, HealthProfile
 from app.models.checkin import CheckInToken, DailyCheckIn
 from app.models.plan import ConsultationPlan, Supplement, PlanSupplement, Recipe, PlanRecipe
 from app.models.followup import FollowUp
+from app.models.dosha_assessment import DoshaAssessment
 
 DATABASE_URL = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 engine = create_async_engine(DATABASE_URL)
@@ -201,7 +202,9 @@ async def seed_demo():
 
         # ── 2. Patient: Shuva Mukhopadhyay ──────────────────────────────────
         result = await db.execute(
-            select(Patient).where(
+            select(Patient)
+            .options(selectinload(Patient.health_profile), selectinload(Patient.checkin_token))
+            .where(
                 Patient.practitioner_id == practitioner.id,
                 Patient.first_name == "Shuva",
                 Patient.last_name == "Mukhopadhyay",
@@ -533,6 +536,70 @@ async def seed_demo():
             print(f"Scheduled follow-up: {followup_date}")
         else:
             print("Follow-up already scheduled, skipping.")
+
+        # ── 8. Dosha Assessment ──────────────────────────────────────────────
+        result = await db.execute(
+            select(DoshaAssessment).where(DoshaAssessment.patient_id == patient.id)
+        )
+        existing_assessment = result.scalars().first()
+
+        if not existing_assessment:
+            assessment = DoshaAssessment(
+                patient_id=patient.id,
+                practitioner_id=practitioner.id,
+                # Prakriti: Kapha-Vata (K dominant, V secondary)
+                prakriti_vata=7,
+                prakriti_pitta=4,
+                prakriti_kapha=9,
+                prakriti_responses={
+                    "body_frame": "kapha", "body_weight": "kapha", "skin": "vata",
+                    "hair": "kapha", "eyes": "kapha", "appetite": "vata",
+                    "digestion": "vata", "thirst": "pitta", "bowel_habits": "vata",
+                    "sleep": "kapha", "dreams": "vata", "speech": "vata",
+                    "mental_activity": "vata", "memory": "kapha", "emotions": "vata",
+                    "stress_response": "vata", "activity_level": "pitta",
+                    "temperature": "kapha", "sweating": "pitta", "joints": "kapha",
+                },
+                # Vikriti: Kapha elevated (respiratory), Vata aggravated (urinary)
+                vikriti_vata=7,
+                vikriti_pitta=4,
+                vikriti_kapha=8,
+                vikriti_responses={
+                    "anxiety": 1, "insomnia": 1, "dry_skin": 0, "constipation": 2,
+                    "joint_pain": 0, "cold_hands": 0, "weight_loss": 0,
+                    "acid_reflux": 2, "inflammation": 1, "irritability": 1,
+                    "excessive_heat": 0, "loose_stools": 1, "burning_eyes": 0, "excessive_sweating": 0,
+                    "congestion": 3, "weight_gain": 1, "lethargy": 2,
+                    "excess_mucus": 2, "sluggish_digestion": 1, "depression": 0, "attachment": 0,
+                },
+                agni_type="Vishama Agni",
+                ama_level="Moderate",
+                agni_responses={
+                    "appetite_pattern": "Vishama Agni",
+                    "post_meal": "Vishama Agni",
+                },
+                ama_responses={
+                    "tongue_coating": 2, "body_odor": 1, "stool_quality": 2, "energy": 2,
+                },
+                ashtavidha_responses={
+                    "nadi": {"finding": "Mixed / dual pulse", "notes": "Kapha-Vata nadi — slow, occasionally irregular. Pitta surges during stress."},
+                    "jihwa": {"finding": "Swollen, thick white coating (Kapha)", "notes": "Moderate white coating indicates Ama in GI tract. Swollen edges."},
+                    "mutra": {"finding": "Scanty, clear, frequent (Vata)", "notes": "Frequent urination, incomplete emptying. History of urethral stricture."},
+                    "mala": {"finding": "Dry, hard, irregular (Vata)", "notes": "Inconsistent bowel movements. Vishama pattern — alternating constipation and loose stools."},
+                    "shabda": {"finding": "Normal / mixed", "notes": "Normal voice quality."},
+                    "sparsha": {"finding": "Dry, rough, cool, thin (Vata)", "notes": "Some dryness noted on extremities."},
+                    "drika": {"finding": "Normal / mixed", "notes": "No significant eye findings."},
+                    "akriti": {"finding": "Heavy, calm, lethargic (Kapha)", "notes": "Kapha constitution evident in build and demeanor."},
+                },
+                result_prakriti="Kapha-Vata",
+                result_vikriti="Kapha-Vata",
+                notes="Initial comprehensive assessment. Kapha-Vata prakriti with Kapha accumulation in respiratory tract and Vata disturbance in urinary system. Vishama Agni with moderate Ama. Priority: address digestive fire, reduce Kapha in sinuses, support urinary tract.",
+            )
+            db.add(assessment)
+            await db.flush()
+            print("Created dosha assessment for Shuva")
+        else:
+            print("Dosha assessment already exists, skipping.")
 
         await db.commit()
         print(f"\nDemo seed complete.")
