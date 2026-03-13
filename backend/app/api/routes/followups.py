@@ -5,6 +5,7 @@ from datetime import date, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
 
 from app.core.database import get_db
@@ -30,11 +31,12 @@ class FollowUpUpdate(BaseModel):
     completed: bool | None = None
 
 
-def _fu_dict(fu: FollowUp) -> dict:
+def _fu_dict(fu: FollowUp, patient_name: str | None = None) -> dict:
     return {
         "id": fu.id,
         "patient_id": fu.patient_id,
         "practitioner_id": fu.practitioner_id,
+        "patient_name": patient_name,
         "scheduled_date": fu.scheduled_date.isoformat(),
         "reason": fu.reason,
         "notes": fu.notes,
@@ -51,14 +53,14 @@ async def list_followups(
     practitioner: Practitioner = Depends(get_current_practitioner),
     db: AsyncSession = Depends(get_db),
 ):
-    q = select(FollowUp).where(FollowUp.practitioner_id == practitioner.id)
+    q = select(FollowUp).options(selectinload(FollowUp.patient)).where(FollowUp.practitioner_id == practitioner.id)
     if completed is not None:
         q = q.where(FollowUp.completed == completed)
     if patient_id:
         q = q.where(FollowUp.patient_id == patient_id)
     q = q.order_by(FollowUp.scheduled_date)
     result = await db.execute(q)
-    return [_fu_dict(fu) for fu in result.scalars().all()]
+    return [_fu_dict(fu, patient_name=fu.patient.full_name if fu.patient else None) for fu in result.scalars().all()]
 
 
 @router.post("", status_code=201)

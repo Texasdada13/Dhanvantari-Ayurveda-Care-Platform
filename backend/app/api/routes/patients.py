@@ -6,11 +6,13 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload
 from pydantic import BaseModel, EmailStr
 
 from app.core.database import get_db
 from app.models.patient import Patient, HealthProfile
 from app.models.checkin import CheckInToken
+from app.models.plan import ConsultationPlan
 from app.api.deps import get_current_practitioner, require_active_subscription, check_patient_limit
 from app.models.practitioner import Practitioner
 
@@ -92,11 +94,20 @@ async def list_patients(
 ):
     result = await db.execute(
         select(Patient)
+        .options(selectinload(Patient.health_profile), selectinload(Patient.checkin_token))
         .where(Patient.practitioner_id == current.id, Patient.active == True)  # noqa: E712
         .order_by(Patient.last_name, Patient.first_name)
     )
     patients = result.scalars().all()
-    return [_patient_summary(p) for p in patients]
+
+    # Check which patients have an active plan
+    plan_result = await db.execute(
+        select(ConsultationPlan.patient_id)
+        .where(ConsultationPlan.active == True)  # noqa: E712
+    )
+    active_plan_ids = set(plan_result.scalars().all())
+
+    return [_patient_summary(p, has_plan=(p.id in active_plan_ids)) for p in patients]
 
 
 @router.post("", status_code=201)
@@ -175,7 +186,9 @@ async def deactivate_patient(
 
 async def _get_or_404(db: AsyncSession, patient_id: int, practitioner_id: int) -> Patient:
     result = await db.execute(
-        select(Patient).where(Patient.id == patient_id, Patient.practitioner_id == practitioner_id)
+        select(Patient)
+        .options(selectinload(Patient.health_profile), selectinload(Patient.checkin_token))
+        .where(Patient.id == patient_id, Patient.practitioner_id == practitioner_id)
     )
     p = result.scalar_one_or_none()
     if not p:
@@ -183,7 +196,7 @@ async def _get_or_404(db: AsyncSession, patient_id: int, practitioner_id: int) -
     return p
 
 
-def _patient_summary(p: Patient) -> dict:
+def _patient_summary(p: Patient, has_plan: bool = False) -> dict:
     return {
         "id": p.id,
         "full_name": p.full_name,
@@ -196,6 +209,7 @@ def _patient_summary(p: Patient) -> dict:
         "created_at": p.created_at.isoformat(),
         "dosha_primary": p.health_profile.dosha_primary if p.health_profile else None,
         "checkin_token": p.checkin_token.token if p.checkin_token else None,
+        "has_plan": has_plan,
     }
 
 
@@ -225,7 +239,28 @@ def _patient_detail(p: Patient, hp: HealthProfile | None, tok: CheckInToken | No
             "allergies": hp.allergies,
             "nadi_notes": hp.nadi_notes,
             "jihwa_notes": hp.jihwa_notes,
-            # … full set
+            "mutra_notes": hp.mutra_notes,
+            "mala_notes": hp.mala_notes,
+            "shabda_notes": hp.shabda_notes,
+            "sparsha_notes": hp.sparsha_notes,
+            "drika_notes": hp.drika_notes,
+            "akriti_notes": hp.akriti_notes,
+            "cholesterol_total": hp.cholesterol_total,
+            "hdl": hp.hdl,
+            "ldl": hp.ldl,
+            "triglycerides": hp.triglycerides,
+            "hemoglobin": hp.hemoglobin,
+            "hematocrit": hp.hematocrit,
+            "glucose": hp.glucose,
+            "hba1c": hp.hba1c,
+            "creatinine": hp.creatinine,
+            "egfr": hp.egfr,
+            "testosterone": hp.testosterone,
+            "tsh": hp.tsh,
+            "psa": hp.psa,
+            "eosinophils_pct": hp.eosinophils_pct,
+            "lab_date": hp.lab_date.isoformat() if hp.lab_date else None,
+            "lab_notes": hp.lab_notes,
         } if hp else None,
         "portal_token": tok.token if tok else None,
     })
