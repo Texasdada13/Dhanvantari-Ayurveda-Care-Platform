@@ -6,10 +6,12 @@ from app.models.followup import FollowUp
 from app.models.billing import Subscription
 from app.models.consultation_note import ConsultationNote
 from app.models.dosha_assessment import DoshaAssessment
+from app.models.yoga import YogaAsana, VideoReference, PlanYogaAsana
 
 __all__ = [
     "Practitioner", "Patient", "HealthProfile",
     "ConsultationPlan", "Supplement", "PlanSupplement", "Recipe", "PlanRecipe",
     "CheckInToken", "DailyCheckIn", "FollowUp", "Subscription", "ConsultationNote",
     "DoshaAssessment",
+    "YogaAsana", "VideoReference", "PlanYogaAsana",
 ]

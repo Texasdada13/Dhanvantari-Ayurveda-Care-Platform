@@ -5,7 +5,7 @@ import { use } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, ExternalLink, Save, FileText, Sparkles, Send, ChevronLeft, Loader2, TrendingUp, TrendingDown, Minus, Clock, Activity, Calendar, PersonStanding } from "lucide-react";
-import { patientsApi, plansApi, checkinsApi, followupsApi, supplementsApi, recipesApi, notesApi, assessmentsApi, aiApi } from "@/lib/api/client";
+import { patientsApi, plansApi, checkinsApi, followupsApi, supplementsApi, recipesApi, notesApi, assessmentsApi, aiApi, yogaApi, planYogaApi } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -178,10 +178,21 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
   const [newFollowupOpen, setNewFollowupOpen] = useState(false);
   const [followupForm, setFollowupForm] = useState({ scheduled_date: "", reason: "", notes: "" });
 
-  // ── Yoga assignment state (frontend-managed until backend support) ──────
+  // ── Yoga assignment (backend-powered) ──────────────────────────────────
   const [addYogaOpen, setAddYogaOpen] = useState(false);
   const [yogaSearch, setYogaSearch] = useState("");
-  const [assignedYoga, setAssignedYoga] = useState<Array<{ id: number; name: string; sanskrit_name: string; duration: string; level: string }>>([]);
+
+  const { data: yogaLib = [] } = useQuery({
+    queryKey: ["yoga-lib", yogaSearch],
+    queryFn: () => yogaApi.list({ search: yogaSearch || undefined }).then((r) => r.data),
+    enabled: addYogaOpen,
+  });
+
+  const { data: assignedYogaRaw = [] } = useQuery({
+    queryKey: ["plan-yoga", plan?.id],
+    queryFn: () => planYogaApi.list(plan.id).then((r) => r.data),
+    enabled: !!plan?.id && (tab === "plan" || tab === "overview"),
+  });
 
   const { data: suppLib = [] } = useQuery({
     queryKey: ["supplements-lib", suppSearch],
@@ -235,6 +246,20 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
   const removeRecipeMutation = useMutation({
     mutationFn: (prId: number) => plansApi.removeRecipe(prId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["plan", patientId] }),
+  });
+
+  const addYogaMutation = useMutation({
+    mutationFn: (asanaId: number) =>
+      planYogaApi.assign(plan.id, { asana_id: asanaId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["plan-yoga", plan?.id] });
+      setAddYogaOpen(false);
+    },
+  });
+
+  const removeYogaMutation = useMutation({
+    mutationFn: (assignmentId: number) => planYogaApi.remove(plan.id, assignmentId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["plan-yoga", plan?.id] }),
   });
 
   const addFollowupMutation = useMutation({
@@ -900,25 +925,28 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium text-sm flex items-center gap-1.5">
                       <PersonStanding className="size-4" />
-                      Yoga ({assignedYoga.length})
+                      Yoga ({assignedYogaRaw.length})
                     </h3>
                     <Button size="sm" variant="outline" onClick={() => setAddYogaOpen(true)} className="gap-1.5">
                       <Plus className="size-3.5" /> Add
                     </Button>
                   </div>
-                  {assignedYoga.length === 0 && (
+                  {assignedYogaRaw.length === 0 && (
                     <p className="text-sm text-muted-foreground">No yoga asanas assigned yet.</p>
                   )}
                   <div className="space-y-2">
-                    {assignedYoga.map((y) => (
+                    {assignedYogaRaw.map((y: { id: number; asana_id: number; frequency: string | null; notes: string | null; asana: { name: string; name_sanskrit: string | null; level: string | null; hold_duration: string | null } | null }) => (
                       <div key={y.id} className="flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{y.name}</p>
-                          <p className="text-xs text-muted-foreground italic">{y.sanskrit_name}</p>
-                          <p className="text-xs text-muted-foreground">{y.level} &middot; {y.duration}</p>
+                          <p className="font-medium truncate">{y.asana?.name ?? `Asana #${y.asana_id}`}</p>
+                          {y.asana?.name_sanskrit && <p className="text-xs text-muted-foreground italic">{y.asana.name_sanskrit}</p>}
+                          <p className="text-xs text-muted-foreground">
+                            {y.asana?.level}{y.asana?.hold_duration && ` · ${y.asana.hold_duration}`}
+                            {y.frequency && ` · ${y.frequency}`}
+                          </p>
                         </div>
                         <button
-                          onClick={() => setAssignedYoga((prev) => prev.filter((a) => a.id !== y.id))}
+                          onClick={() => removeYogaMutation.mutate(y.id)}
                           className="text-muted-foreground hover:text-destructive transition-colors"
                         >
                           <Trash2 className="size-3.5" />
@@ -1279,50 +1307,23 @@ export default function PatientDetailPage({ params }: { params: Promise<{ id: st
         <div className="space-y-3">
           <Input placeholder="Search yoga asanas…" value={yogaSearch} onChange={(e) => setYogaSearch(e.target.value)} />
           <div className="max-h-72 overflow-y-auto space-y-1.5 -mx-1 px-1">
-            {[
-              { id: 1, name: "Mountain Pose", sanskrit_name: "Tadasana", duration: "30 sec – 1 min", level: "Beginner", good_for: "Vata, Pitta, Kapha" },
-              { id: 2, name: "Cobra Pose", sanskrit_name: "Bhujangasana", duration: "15–30 sec", level: "Beginner", good_for: "Kapha, Vata" },
-              { id: 3, name: "Child's Pose", sanskrit_name: "Balasana", duration: "1–5 min", level: "Beginner", good_for: "Vata, Pitta" },
-              { id: 4, name: "Downward-Facing Dog", sanskrit_name: "Adho Mukha Svanasana", duration: "30 sec – 2 min", level: "Beginner", good_for: "Kapha, Vata" },
-              { id: 5, name: "Warrior I", sanskrit_name: "Virabhadrasana I", duration: "30 sec – 1 min per side", level: "Beginner", good_for: "Vata, Kapha" },
-              { id: 6, name: "Warrior II", sanskrit_name: "Virabhadrasana II", duration: "30 sec – 1 min per side", level: "Beginner", good_for: "Vata, Kapha" },
-              { id: 7, name: "Tree Pose", sanskrit_name: "Vrksasana", duration: "30 sec – 1 min per side", level: "Beginner", good_for: "Vata" },
-              { id: 8, name: "Seated Forward Bend", sanskrit_name: "Paschimottanasana", duration: "1–3 min", level: "Beginner", good_for: "Pitta, Vata" },
-              { id: 9, name: "Bridge Pose", sanskrit_name: "Setu Bandhasana", duration: "30 sec – 1 min", level: "Beginner", good_for: "Vata, Kapha" },
-              { id: 10, name: "Supine Spinal Twist", sanskrit_name: "Supta Matsyendrasana", duration: "1–3 min per side", level: "Beginner", good_for: "Vata, Pitta, Kapha" },
-              { id: 11, name: "Legs Up the Wall", sanskrit_name: "Viparita Karani", duration: "5–15 min", level: "Beginner", good_for: "Vata, Pitta" },
-              { id: 12, name: "Cat-Cow Stretch", sanskrit_name: "Marjaryasana-Bitilasana", duration: "1–3 min", level: "Beginner", good_for: "Vata, Pitta, Kapha" },
-              { id: 13, name: "Corpse Pose", sanskrit_name: "Savasana", duration: "5–20 min", level: "Beginner", good_for: "Vata, Pitta" },
-              { id: 14, name: "Triangle Pose", sanskrit_name: "Trikonasana", duration: "30 sec – 1 min per side", level: "Intermediate", good_for: "Kapha, Vata" },
-              { id: 15, name: "Half Lord of the Fishes", sanskrit_name: "Ardha Matsyendrasana", duration: "30 sec – 1 min per side", level: "Intermediate", good_for: "Kapha, Vata" },
-              { id: 16, name: "Pigeon Pose", sanskrit_name: "Eka Pada Rajakapotasana", duration: "1–3 min per side", level: "Intermediate", good_for: "Vata, Pitta" },
-              { id: 17, name: "Shoulder Stand", sanskrit_name: "Sarvangasana", duration: "1–5 min", level: "Intermediate", good_for: "Pitta, Kapha" },
-              { id: 18, name: "Headstand", sanskrit_name: "Sirsasana", duration: "30 sec – 5 min", level: "Advanced", good_for: "Kapha" },
-              { id: 19, name: "Sun Salutation A", sanskrit_name: "Surya Namaskar A", duration: "5–15 min", level: "Beginner", good_for: "Kapha, Vata" },
-              { id: 20, name: "Moon Salutation", sanskrit_name: "Chandra Namaskar", duration: "5–15 min", level: "Intermediate", good_for: "Pitta, Vata" },
-            ]
-              .filter(
-                (y) =>
-                  !yogaSearch ||
-                  y.name.toLowerCase().includes(yogaSearch.toLowerCase()) ||
-                  y.sanskrit_name.toLowerCase().includes(yogaSearch.toLowerCase())
-              )
-              .filter((y) => !assignedYoga.some((a) => a.id === y.id))
-              .map((y) => (
+            {yogaLib
+              .filter((y: { id: number }) => !assignedYogaRaw.some((a: { asana_id: number }) => a.asana_id === y.id))
+              .map((y: { id: number; name: string; name_sanskrit: string | null; level: string | null; hold_duration: string | null; dosha_effect: string | null }) => (
                 <button
                   key={y.id}
-                  onClick={() => {
-                    setAssignedYoga((prev) => [...prev, { id: y.id, name: y.name, sanskrit_name: y.sanskrit_name, duration: y.duration, level: y.level }]);
-                    setAddYogaOpen(false);
-                  }}
+                  onClick={() => addYogaMutation.mutate(y.id)}
                   className="w-full text-left rounded-lg border px-3 py-2.5 hover:bg-muted/50 transition-colors"
                 >
                   <p className="text-sm font-medium">{y.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {y.sanskrit_name} &middot; {y.level} &middot; {y.duration} &middot; Good for {y.good_for}
+                    {y.name_sanskrit} &middot; {y.level}{y.hold_duration && ` · ${y.hold_duration}`}{y.dosha_effect && ` · ${y.dosha_effect}`}
                   </p>
                 </button>
               ))}
+            {yogaLib.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">No yoga asanas found. Seed the database first.</p>
+            )}
           </div>
         </div>
       </Dialog>

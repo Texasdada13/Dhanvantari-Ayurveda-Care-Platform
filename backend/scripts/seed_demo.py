@@ -26,6 +26,7 @@ from app.models.checkin import CheckInToken, DailyCheckIn
 from app.models.plan import ConsultationPlan, Supplement, PlanSupplement, Recipe, PlanRecipe
 from app.models.followup import FollowUp
 from app.models.dosha_assessment import DoshaAssessment
+from app.models.yoga import YogaAsana, VideoReference, PlanYogaAsana
 
 DATABASE_URL = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 engine = create_async_engine(DATABASE_URL)
@@ -1008,6 +1009,331 @@ async def seed_demo():
             print("Created Arjun Patel — Vata-Pitta, mid-treatment (10 days, active plan)")
         else:
             print(f"Patient Arjun already exists (id={arjun.id}), skipping.")
+
+        # ── 11. Seed yoga asanas ─────────────────────────────────────────────
+        result = await db.execute(select(YogaAsana).limit(1))
+        if not result.scalars().first():
+            print("Seeding yoga asanas...")
+            SEED_ASANAS = [
+                {
+                    "name": "Mountain Pose", "name_sanskrit": "Tadasana",
+                    "category": "Standing", "level": "Beginner",
+                    "description": "Foundation standing pose that improves posture and body awareness.",
+                    "instructions": ["Stand with feet together, weight evenly distributed", "Engage thighs, lengthen spine", "Arms at sides, palms forward", "Hold for 30-60 seconds, breathing steadily"],
+                    "benefits": "Improves posture, strengthens thighs, ankles and spine. Promotes body awareness.",
+                    "dosha_effect": "Balances Vata & Kapha",
+                    "therapeutic_focus": ["Posture", "Grounding", "Balance"],
+                    "modifications": ["Widen feet for more stability", "Stand against a wall for support"],
+                    "contraindications": ["Low blood pressure (hold briefly)", "Headache"],
+                    "hold_duration": "30-60 seconds", "repetitions": "3-5 rounds",
+                },
+                {
+                    "name": "Warrior I", "name_sanskrit": "Virabhadrasana I",
+                    "category": "Standing", "level": "Beginner",
+                    "description": "Powerful standing lunge that builds strength and stamina.",
+                    "instructions": ["Step right foot back 3-4 feet", "Bend front knee to 90 degrees over ankle", "Raise arms overhead, palms facing", "Square hips forward, gaze up"],
+                    "benefits": "Strengthens legs, opens hips and chest. Builds stamina and concentration.",
+                    "dosha_effect": "Reduces Kapha, balances Vata",
+                    "therapeutic_focus": ["Strength", "Hip Opening", "Stamina"],
+                    "modifications": ["Shorten stance for less intensity", "Hands on hips instead of overhead"],
+                    "contraindications": ["High blood pressure", "Heart problems", "Knee injuries"],
+                    "hold_duration": "30-60 seconds per side",
+                },
+                {
+                    "name": "Warrior II", "name_sanskrit": "Virabhadrasana II",
+                    "category": "Standing", "level": "Beginner",
+                    "description": "Open-hip standing pose that builds leg strength and focus.",
+                    "instructions": ["Stand wide, turn right foot out 90°", "Bend right knee over ankle", "Extend arms parallel to floor", "Gaze over front fingertips"],
+                    "benefits": "Strengthens legs and ankles. Stretches groins, chest and shoulders.",
+                    "dosha_effect": "Reduces Kapha, energizes Vata",
+                    "therapeutic_focus": ["Strength", "Focus", "Hip Opening"],
+                    "modifications": ["Use a chair under front thigh for support"],
+                    "contraindications": ["Knee injuries", "High blood pressure"],
+                    "hold_duration": "30-60 seconds per side",
+                },
+                {
+                    "name": "Tree Pose", "name_sanskrit": "Vrksasana",
+                    "category": "Balance", "level": "Beginner",
+                    "description": "Standing balance that develops focus and stability.",
+                    "instructions": ["Stand on left leg", "Place right foot on inner left thigh or calf (not knee)", "Bring hands to prayer position or overhead", "Fix gaze on a steady point"],
+                    "benefits": "Improves balance, strengthens ankles and legs. Calms the mind.",
+                    "dosha_effect": "Grounds Vata, focuses Pitta",
+                    "therapeutic_focus": ["Balance", "Focus", "Grounding"],
+                    "modifications": ["Foot on calf instead of thigh", "Use a wall for support"],
+                    "contraindications": ["Severe balance disorders", "Ankle injuries"],
+                    "hold_duration": "30-60 seconds per side",
+                },
+                {
+                    "name": "Cobra Pose", "name_sanskrit": "Bhujangasana",
+                    "category": "Prone", "level": "Beginner",
+                    "description": "Gentle backbend that strengthens the spine and opens the chest.",
+                    "instructions": ["Lie face down, hands under shoulders", "Press into hands, lift chest off floor", "Keep elbows slightly bent", "Draw shoulders back and down"],
+                    "benefits": "Strengthens spine, opens chest and lungs. Stimulates abdominal organs.",
+                    "dosha_effect": "Reduces Kapha, stimulates Agni",
+                    "therapeutic_focus": ["Back Strength", "Chest Opening", "Digestion"],
+                    "modifications": ["Baby cobra — only lift a few inches", "Use forearms (Sphinx Pose)"],
+                    "contraindications": ["Pregnancy", "Recent abdominal surgery", "Severe back injury"],
+                    "hold_duration": "15-30 seconds", "repetitions": "3-5 rounds",
+                },
+                {
+                    "name": "Downward-Facing Dog", "name_sanskrit": "Adho Mukha Svanasana",
+                    "category": "Standing", "level": "Beginner",
+                    "description": "Full-body stretch and mild inversion that energizes and calms.",
+                    "instructions": ["Start on hands and knees", "Tuck toes, lift hips up and back", "Press hands into floor, straighten arms", "Let head hang between arms"],
+                    "benefits": "Stretches hamstrings, calves, and shoulders. Strengthens arms and legs. Calms the brain.",
+                    "dosha_effect": "Calms Pitta, reduces Kapha",
+                    "therapeutic_focus": ["Full Body Stretch", "Inversion", "Energy"],
+                    "modifications": ["Bend knees generously", "Use blocks under hands"],
+                    "contraindications": ["Carpal tunnel syndrome", "Late-term pregnancy", "High blood pressure (hold briefly)"],
+                    "hold_duration": "1-3 minutes",
+                },
+                {
+                    "name": "Child's Pose", "name_sanskrit": "Balasana",
+                    "category": "Restorative", "level": "Beginner",
+                    "description": "Gentle resting pose that calms the nervous system.",
+                    "instructions": ["Kneel on floor, sit on heels", "Fold forward, forehead to floor", "Arms extended forward or alongside body", "Breathe deeply into back body"],
+                    "benefits": "Gently stretches hips, thighs, ankles. Calms the brain, relieves stress and fatigue.",
+                    "dosha_effect": "Calms Vata & Pitta",
+                    "therapeutic_focus": ["Relaxation", "Stress Relief", "Hip Opening"],
+                    "modifications": ["Place a pillow between thighs and calves", "Wide knees for belly space"],
+                    "contraindications": ["Knee injury (use padding)", "Pregnancy (wide-knee variation)"],
+                    "hold_duration": "1-5 minutes",
+                },
+                {
+                    "name": "Seated Forward Fold", "name_sanskrit": "Paschimottanasana",
+                    "category": "Seated", "level": "Beginner",
+                    "description": "Deep hamstring and back stretch that calms the mind.",
+                    "instructions": ["Sit with legs extended forward", "Inhale, lengthen spine", "Exhale, hinge at hips and fold forward", "Hold feet, ankles, or shins"],
+                    "benefits": "Stretches spine, shoulders, hamstrings. Calms the brain, reduces anxiety.",
+                    "dosha_effect": "Calms Vata & Pitta",
+                    "therapeutic_focus": ["Flexibility", "Stress Relief", "Digestion"],
+                    "modifications": ["Bend knees slightly", "Use a strap around feet"],
+                    "contraindications": ["Back injury", "Disc herniation"],
+                    "hold_duration": "1-3 minutes",
+                },
+                {
+                    "name": "Bridge Pose", "name_sanskrit": "Setu Bandhasana",
+                    "category": "Supine", "level": "Beginner",
+                    "description": "Gentle backbend that opens the chest and strengthens the back.",
+                    "instructions": ["Lie on back, bend knees, feet hip-width apart", "Press feet into floor, lift hips", "Clasp hands under back or keep arms at sides", "Hold and breathe steadily"],
+                    "benefits": "Strengthens back, glutes, hamstrings. Opens chest and hip flexors.",
+                    "dosha_effect": "Stimulates Agni, calms Vata",
+                    "therapeutic_focus": ["Back Strength", "Chest Opening", "Energy"],
+                    "modifications": ["Place a block under sacrum for support"],
+                    "contraindications": ["Neck injury", "Recent back surgery"],
+                    "hold_duration": "30-60 seconds", "repetitions": "3-5 rounds",
+                },
+                {
+                    "name": "Corpse Pose", "name_sanskrit": "Savasana",
+                    "category": "Restorative", "level": "Beginner",
+                    "description": "Final relaxation pose that integrates the practice.",
+                    "instructions": ["Lie flat on back, legs slightly apart", "Arms at sides, palms up", "Close eyes, relax every muscle", "Breathe naturally, let go completely"],
+                    "benefits": "Deep relaxation, reduces blood pressure, calms the nervous system.",
+                    "dosha_effect": "Balances all doshas, especially Vata",
+                    "therapeutic_focus": ["Deep Relaxation", "Stress Relief", "Integration"],
+                    "modifications": ["Place bolster under knees", "Cover with a blanket for warmth"],
+                    "contraindications": [],
+                    "hold_duration": "5-15 minutes",
+                },
+                {
+                    "name": "Sun Salutation A", "name_sanskrit": "Surya Namaskar A",
+                    "category": "Warm-Up", "level": "Intermediate",
+                    "description": "Dynamic sequence that warms the entire body and links breath with movement.",
+                    "instructions": ["Mountain → Forward fold → Halfway lift", "Step/jump back to plank → Chaturanga", "Upward Dog → Downward Dog (5 breaths)", "Step forward → Forward fold → Mountain"],
+                    "benefits": "Full-body warm-up. Builds heat, improves cardiovascular health, increases flexibility.",
+                    "dosha_effect": "Reduces Kapha, balances Vata when done slowly",
+                    "therapeutic_focus": ["Full Body", "Cardiovascular", "Flexibility"],
+                    "modifications": ["Use knees in plank/chaturanga", "Step instead of jump"],
+                    "contraindications": ["Heart conditions", "High blood pressure", "Pregnancy (modified only)"],
+                    "repetitions": "3-5 rounds",
+                },
+                {
+                    "name": "Triangle Pose", "name_sanskrit": "Trikonasana",
+                    "category": "Standing", "level": "Intermediate",
+                    "description": "Standing lateral stretch that opens the side body.",
+                    "instructions": ["Stand wide, right foot out 90°", "Extend arms, reach right hand to shin/floor", "Extend left arm to ceiling", "Gaze up at top hand"],
+                    "benefits": "Stretches legs, hips, spine. Strengthens thighs, knees, ankles.",
+                    "dosha_effect": "Balances Vata & Kapha",
+                    "therapeutic_focus": ["Side Body Stretch", "Balance", "Digestion"],
+                    "modifications": ["Use a block under bottom hand"],
+                    "contraindications": ["Low blood pressure", "Neck problems (look down instead of up)"],
+                    "hold_duration": "30-60 seconds per side",
+                },
+                {
+                    "name": "Boat Pose", "name_sanskrit": "Navasana",
+                    "category": "Seated", "level": "Intermediate",
+                    "description": "Core-strengthening pose that builds abdominal fire.",
+                    "instructions": ["Sit with knees bent, feet on floor", "Lean back slightly, lift feet off floor", "Extend legs to 45 degrees (or keep bent)", "Arms parallel to floor, palms facing in"],
+                    "benefits": "Strengthens core, hip flexors, and spine. Stimulates Agni.",
+                    "dosha_effect": "Reduces Kapha, stimulates Agni",
+                    "therapeutic_focus": ["Core Strength", "Digestion", "Willpower"],
+                    "modifications": ["Keep knees bent", "Hold behind thighs for support"],
+                    "contraindications": ["Pregnancy", "Low back pain", "Recent abdominal surgery"],
+                    "hold_duration": "15-30 seconds", "repetitions": "3-5 rounds",
+                },
+                {
+                    "name": "Pigeon Pose", "name_sanskrit": "Eka Pada Rajakapotasana",
+                    "category": "Hip Opener", "level": "Intermediate",
+                    "description": "Deep hip opener that releases stored tension and emotion.",
+                    "instructions": ["From downward dog, bring right knee behind right wrist", "Extend left leg straight back", "Square hips, fold forward over front leg", "Rest on forearms or forehead"],
+                    "benefits": "Deep hip flexor and glute stretch. Releases emotional tension.",
+                    "dosha_effect": "Calms Vata, releases Pitta",
+                    "therapeutic_focus": ["Hip Opening", "Emotional Release", "Flexibility"],
+                    "modifications": ["Use a block or blanket under front hip", "Reclined pigeon (figure-4) as alternative"],
+                    "contraindications": ["Knee injury", "Sacroiliac issues"],
+                    "hold_duration": "1-3 minutes per side",
+                },
+                {
+                    "name": "Spinal Twist", "name_sanskrit": "Ardha Matsyendrasana",
+                    "category": "Twist", "level": "Intermediate",
+                    "description": "Seated twist that detoxifies and improves spinal mobility.",
+                    "instructions": ["Sit with legs extended", "Bend right knee, cross over left leg", "Twist torso to the right, left elbow outside right knee", "Lengthen spine on each inhale, deepen twist on exhale"],
+                    "benefits": "Improves spinal mobility. Stimulates digestion and detoxification.",
+                    "dosha_effect": "Stimulates Agni, reduces Kapha",
+                    "therapeutic_focus": ["Detox", "Spinal Mobility", "Digestion"],
+                    "modifications": ["Keep bottom leg straight", "Use hand behind instead of elbow hook"],
+                    "contraindications": ["Spinal disc injury", "Pregnancy"],
+                    "hold_duration": "30-60 seconds per side",
+                },
+                {
+                    "name": "Shoulder Stand", "name_sanskrit": "Sarvangasana",
+                    "category": "Inversion", "level": "Advanced",
+                    "description": "Queen of asanas — full inversion that benefits the thyroid and calms the nervous system.",
+                    "instructions": ["Lie on back, lift legs overhead", "Support lower back with hands", "Extend legs straight up", "Keep weight on shoulders, not neck"],
+                    "benefits": "Stimulates thyroid. Calms the brain, reduces anxiety. Improves circulation.",
+                    "dosha_effect": "Calms Vata & Pitta, reduces Kapha",
+                    "therapeutic_focus": ["Thyroid", "Inversion", "Calm"],
+                    "modifications": ["Legs up the wall as gentle alternative", "Use blankets under shoulders"],
+                    "contraindications": ["Neck injury", "High blood pressure", "Glaucoma", "Menstruation", "Pregnancy"],
+                    "hold_duration": "1-5 minutes",
+                },
+                {
+                    "name": "Headstand", "name_sanskrit": "Sirsasana",
+                    "category": "Inversion", "level": "Advanced",
+                    "description": "King of asanas — full inversion that builds strength and clarity.",
+                    "instructions": ["Interlace fingers, place forearms on floor", "Place crown of head on floor, cupped by hands", "Walk feet in, lift legs up one at a time or together", "Engage core, press forearms down"],
+                    "benefits": "Builds upper body strength. Increases blood flow to brain. Improves focus and balance.",
+                    "dosha_effect": "Reduces Kapha, clarifies Pitta mind",
+                    "therapeutic_focus": ["Strength", "Focus", "Inversion"],
+                    "modifications": ["Practice against a wall", "Dolphin pose as preparation"],
+                    "contraindications": ["Neck injury", "High blood pressure", "Glaucoma", "Heart conditions", "Pregnancy"],
+                    "hold_duration": "30 seconds to 5 minutes",
+                },
+                {
+                    "name": "Legs Up The Wall", "name_sanskrit": "Viparita Karani",
+                    "category": "Restorative", "level": "Beginner",
+                    "description": "Gentle inversion that promotes relaxation and reduces swelling.",
+                    "instructions": ["Sit with one hip against wall", "Swing legs up the wall as you lie back", "Arms at sides or on belly", "Close eyes and breathe"],
+                    "benefits": "Reduces leg swelling, calms the nervous system, relieves lower back tension.",
+                    "dosha_effect": "Calms Vata & Pitta",
+                    "therapeutic_focus": ["Relaxation", "Circulation", "Recovery"],
+                    "modifications": ["Place a bolster under hips", "Bend knees if hamstrings are tight"],
+                    "contraindications": ["Glaucoma", "Serious neck problems"],
+                    "hold_duration": "5-15 minutes",
+                },
+                {
+                    "name": "Cat-Cow Stretch", "name_sanskrit": "Marjaryasana-Bitilasana",
+                    "category": "Warm-Up", "level": "Beginner",
+                    "description": "Gentle spinal warm-up that coordinates breath and movement.",
+                    "instructions": ["Start on hands and knees", "Inhale: drop belly, lift chest and tailbone (Cow)", "Exhale: round spine, tuck chin and tailbone (Cat)", "Flow between positions with breath"],
+                    "benefits": "Warms the spine, improves spinal flexibility. Massages abdominal organs.",
+                    "dosha_effect": "Balances Vata, gently stimulates Agni",
+                    "therapeutic_focus": ["Spinal Mobility", "Warm-Up", "Breath Awareness"],
+                    "modifications": ["Use fists instead of flat hands for wrist issues"],
+                    "contraindications": ["Severe neck injury (keep head neutral)"],
+                    "repetitions": "10-20 rounds",
+                },
+                {
+                    "name": "Camel Pose", "name_sanskrit": "Ustrasana",
+                    "category": "Backbend", "level": "Intermediate",
+                    "description": "Deep backbend that opens the entire front body.",
+                    "instructions": ["Kneel with knees hip-width apart", "Place hands on lower back, fingers pointing down", "Lift chest and lean back", "Reach for heels if accessible"],
+                    "benefits": "Opens chest, hip flexors, and shoulders. Stimulates abdominal organs.",
+                    "dosha_effect": "Reduces Kapha, opens Vata in chest",
+                    "therapeutic_focus": ["Chest Opening", "Back Flexibility", "Energy"],
+                    "modifications": ["Keep hands on lower back", "Use blocks beside ankles"],
+                    "contraindications": ["Low back pain", "Neck injury", "High or low blood pressure"],
+                    "hold_duration": "15-30 seconds", "repetitions": "2-3 rounds",
+                },
+            ]
+
+            asana_map = {}
+            for data in SEED_ASANAS:
+                asana = YogaAsana(**data)
+                db.add(asana)
+                await db.flush()
+                asana_map[data["name"]] = asana.id
+
+            # Seed videos for a few asanas
+            SEED_VIDEOS = [
+                {
+                    "title": "Mountain Pose for Beginners",
+                    "url": "https://www.youtube.com/watch?v=2HTvZp5rPrg",
+                    "platform": "youtube",
+                    "embed_url": "https://www.youtube.com/embed/2HTvZp5rPrg",
+                    "thumbnail_url": "https://img.youtube.com/vi/2HTvZp5rPrg/hqdefault.jpg",
+                    "duration_display": "3:45",
+                    "source_name": "Yoga With Adriene",
+                    "is_primary": True,
+                    "entity_type": "yoga_asana",
+                    "entity_id": asana_map["Mountain Pose"],
+                },
+                {
+                    "title": "Cobra Pose Tutorial",
+                    "url": "https://www.youtube.com/watch?v=JDcdhTuycOI",
+                    "platform": "youtube",
+                    "embed_url": "https://www.youtube.com/embed/JDcdhTuycOI",
+                    "thumbnail_url": "https://img.youtube.com/vi/JDcdhTuycOI/hqdefault.jpg",
+                    "duration_display": "5:12",
+                    "source_name": "Yoga With Adriene",
+                    "is_primary": True,
+                    "entity_type": "yoga_asana",
+                    "entity_id": asana_map["Cobra Pose"],
+                },
+                {
+                    "title": "Sun Salutation A — Step by Step",
+                    "url": "https://www.youtube.com/watch?v=73sjOu0g58M",
+                    "platform": "youtube",
+                    "embed_url": "https://www.youtube.com/embed/73sjOu0g58M",
+                    "thumbnail_url": "https://img.youtube.com/vi/73sjOu0g58M/hqdefault.jpg",
+                    "duration_display": "8:30",
+                    "source_name": "Yoga With Adriene",
+                    "is_primary": True,
+                    "entity_type": "yoga_asana",
+                    "entity_id": asana_map["Sun Salutation A"],
+                },
+                {
+                    "title": "Downward Dog — Common Mistakes",
+                    "url": "https://www.youtube.com/watch?v=EC7RGJ975Hk",
+                    "platform": "youtube",
+                    "embed_url": "https://www.youtube.com/embed/EC7RGJ975Hk",
+                    "thumbnail_url": "https://img.youtube.com/vi/EC7RGJ975Hk/hqdefault.jpg",
+                    "duration_display": "6:15",
+                    "source_name": "Yoga With Adriene",
+                    "is_primary": True,
+                    "entity_type": "yoga_asana",
+                    "entity_id": asana_map["Downward-Facing Dog"],
+                },
+            ]
+
+            for vdata in SEED_VIDEOS:
+                db.add(VideoReference(**vdata))
+            await db.flush()
+            print(f"Seeded {len(SEED_ASANAS)} yoga asanas and {len(SEED_VIDEOS)} video references.")
+
+            # Assign a couple asanas to Shuva's plan
+            result = await db.execute(
+                select(ConsultationPlan).where(ConsultationPlan.patient_id == shuva.id, ConsultationPlan.active == True)  # noqa: E712
+            )
+            shuva_plan = result.scalars().first()
+            if shuva_plan:
+                db.add(PlanYogaAsana(plan_id=shuva_plan.id, asana_id=asana_map["Mountain Pose"], frequency="Daily", notes="Foundation pose for grounding Kapha energy."))
+                db.add(PlanYogaAsana(plan_id=shuva_plan.id, asana_id=asana_map["Sun Salutation A"], frequency="Daily", notes="3-5 rounds each morning to build heat and reduce Kapha."))
+                db.add(PlanYogaAsana(plan_id=shuva_plan.id, asana_id=asana_map["Cobra Pose"], frequency="Daily", notes="Opens chest, stimulates Agni."))
+                await db.flush()
+                print("Assigned 3 yoga asanas to Shuva's care plan.")
+        else:
+            print("Yoga asanas already seeded, skipping.")
 
         await db.commit()
         print(f"\nDemo seed complete.")

@@ -163,6 +163,30 @@ export const assessmentsApi = {
   delete: (patientId: number, id: number)    => api.delete(`/api/patients/${patientId}/assessments/${id}`),
 };
 
+export const yogaApi = {
+  list:   (params?: { search?: string; category?: string; level?: string; dosha?: string }) =>
+    api.get("/api/yoga-asanas", { params }),
+  get:    (id: number)                => api.get(`/api/yoga-asanas/${id}`),
+  create: (data: unknown)             => api.post("/api/yoga-asanas", data),
+  update: (id: number, data: unknown) => api.patch(`/api/yoga-asanas/${id}`, data),
+  delete: (id: number)                => api.delete(`/api/yoga-asanas/${id}`),
+  videos: (asanaId: number)           => api.get(`/api/yoga-asanas/${asanaId}/videos`),
+};
+
+export const videosApi = {
+  list:   (params?: { entity_type?: string; entity_id?: number }) =>
+    api.get("/api/videos", { params }),
+  create: (data: unknown)             => api.post("/api/videos", data),
+  update: (id: number, data: unknown) => api.patch(`/api/videos/${id}`, data),
+  delete: (id: number)                => api.delete(`/api/videos/${id}`),
+};
+
+export const planYogaApi = {
+  list:   (planId: number)                => api.get(`/api/plans/${planId}/yoga`),
+  assign: (planId: number, data: unknown) => api.post(`/api/plans/${planId}/yoga`, data),
+  remove: (planId: number, assignmentId: number) => api.delete(`/api/plans/${planId}/yoga/${assignmentId}`),
+};
+
 export const billingApi = {
   createCheckoutSession: (tier: string) => api.post("/api/billing/checkout", { tier }),
   createPortalSession:   ()             => api.post("/api/billing/portal"),
