@@ -38,6 +38,8 @@ qrcode[pil]==7.4.2
 python-dateutil==2.9.0
 Pillow==10.4.0
 
+greenlet==3.1.1
+
 # Dev
 pytest==8.3.3
 pytest-asyncio==0.24.0
