@@ -212,6 +212,52 @@ export const planPranayamaApi = {
   reorder: (planId: number, ids: number[]) => api.put(`/api/plans/${planId}/pranayama/reorder`, { ids }),
 };
 
+export const therapiesApi = {
+  list:   (params?: { search?: string; category?: string; dosha?: string }) =>
+    api.get("/api/therapies", { params }),
+  get:    (id: number)                => api.get(`/api/therapies/${id}`),
+  create: (data: unknown)             => api.post("/api/therapies", data),
+  update: (id: number, data: unknown) => api.patch(`/api/therapies/${id}`, data),
+  delete: (id: number)                => api.delete(`/api/therapies/${id}`),
+};
+
+export const packagesApi = {
+  list:   (params?: { search?: string; category?: string }) =>
+    api.get("/api/packages", { params }),
+  get:    (id: number)                => api.get(`/api/packages/${id}`),
+  create: (data: unknown)             => api.post("/api/packages", data),
+  update: (id: number, data: unknown) => api.patch(`/api/packages/${id}`, data),
+  delete: (id: number)                => api.delete(`/api/packages/${id}`),
+};
+
+export const planTherapyApi = {
+  list:    (planId: number)                => api.get(`/api/plans/${planId}/therapies`),
+  assign:  (planId: number, data: unknown) => api.post(`/api/plans/${planId}/therapies`, data),
+  update:  (planId: number, assignmentId: number, data: unknown) => api.patch(`/api/plans/${planId}/therapies/${assignmentId}`, data),
+  remove:  (planId: number, assignmentId: number) => api.delete(`/api/plans/${planId}/therapies/${assignmentId}`),
+  reorder: (planId: number, ids: number[]) => api.put(`/api/plans/${planId}/therapies/reorder`, { ids }),
+};
+
+export const planPackageApi = {
+  list:    (planId: number)                => api.get(`/api/plans/${planId}/packages`),
+  assign:  (planId: number, data: unknown) => api.post(`/api/plans/${planId}/packages`, data),
+  remove:  (planId: number, assignmentId: number) => api.delete(`/api/plans/${planId}/packages/${assignmentId}`),
+};
+
+export const intakeApi = {
+  // Public (no auth)
+  getForm:  (token: string)                => api.get(`/api/intake/form/${token}`),
+  submit:   (token: string, data: unknown) => api.post(`/api/intake/form/${token}/submit`, data),
+  // Practitioner (auth required)
+  generateLink:      ()                                 => api.post("/api/intake/generate-link"),
+  listSubmissions:   (status?: string)                  => api.get("/api/intake/submissions", { params: status ? { status_filter: status } : {} }),
+  getSubmission:     (id: number)                       => api.get(`/api/intake/submissions/${id}`),
+  reviewSubmission:  (id: number)                       => api.post(`/api/intake/submissions/${id}/review`),
+  approveSubmission: (id: number)                       => api.post(`/api/intake/submissions/${id}/approve`),
+  rejectSubmission:  (id: number, reason?: string)      => api.post(`/api/intake/submissions/${id}/reject`, { reason }),
+  deleteSubmission:  (id: number)                       => api.delete(`/api/intake/submissions/${id}`),
+};
+
 export const billingApi = {
   createCheckoutSession: (tier: string) => api.post("/api/billing/checkout", { tier }),
   createPortalSession:   ()             => api.post("/api/billing/portal"),

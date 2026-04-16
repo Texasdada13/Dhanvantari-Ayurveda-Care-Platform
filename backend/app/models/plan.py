@@ -36,6 +36,8 @@ class ConsultationPlan(Base):
     patient:          Mapped["Patient"]          = relationship(back_populates="plans")  # noqa: F821
     plan_supplements: Mapped[list["PlanSupplement"]] = relationship(back_populates="plan", cascade="all, delete-orphan")
     plan_recipes:     Mapped[list["PlanRecipe"]]     = relationship(back_populates="plan", cascade="all, delete-orphan")
+    plan_therapies:   Mapped[list["PlanTherapy"]]        = relationship(back_populates="plan", cascade="all, delete-orphan")  # noqa: F821
+    plan_packages:    Mapped[list["PlanServicePackage"]]  = relationship(back_populates="plan", cascade="all, delete-orphan")  # noqa: F821
 
 
 class Supplement(Base):

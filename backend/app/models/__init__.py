@@ -9,6 +9,7 @@ from app.models.dosha_assessment import DoshaAssessment
 from app.models.yoga import YogaAsana, VideoReference, PlanYogaAsana
 from app.models.pranayama import Pranayama, PlanPranayama
 from app.models.intake import IntakeToken, IntakeSubmission
+from app.models.therapy import Therapy, ServicePackage, PackageTherapy, PlanTherapy, PlanServicePackage
 
 __all__ = [
     "Practitioner", "Patient", "HealthProfile",
@@ -18,4 +19,5 @@ __all__ = [
     "YogaAsana", "VideoReference", "PlanYogaAsana",
     "Pranayama", "PlanPranayama",
     "IntakeToken", "IntakeSubmission",
+    "Therapy", "ServicePackage", "PackageTherapy", "PlanTherapy", "PlanServicePackage",
 ]

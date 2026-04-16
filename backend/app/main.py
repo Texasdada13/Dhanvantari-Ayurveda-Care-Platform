@@ -13,7 +13,7 @@ from sqlalchemy import select
 
 from app.core.config import settings
 from app.core.database import engine, Base, AsyncSessionLocal
-from app.api.routes import auth, practitioners, patients, plans, checkins, portal, ai, billing, supplements, recipes, followups, consultation_notes, assessments, yoga, pranayama, intake
+from app.api.routes import auth, practitioners, patients, plans, checkins, portal, ai, billing, supplements, recipes, followups, consultation_notes, assessments, yoga, pranayama, intake, therapies
 
 
 async def _ensure_demo_user():
@@ -97,6 +97,10 @@ app.include_router(yoga.plan_yoga_router,    prefix="/api/plans",       tags=["p
 app.include_router(pranayama.router,             prefix="/api/pranayama",   tags=["pranayama"])
 app.include_router(pranayama.plan_pranayama_router, prefix="/api/plans",   tags=["plan-pranayama"])
 app.include_router(intake.router,                    prefix="/api/intake",  tags=["intake"])
+app.include_router(therapies.router,               prefix="/api/therapies",  tags=["therapies"])
+app.include_router(therapies.package_router,       prefix="/api/packages",   tags=["packages"])
+app.include_router(therapies.plan_therapy_router,  prefix="/api/plans",      tags=["plan-therapies"])
+app.include_router(therapies.plan_package_router,  prefix="/api/plans",      tags=["plan-packages"])
 
 
 @app.get("/api/health")
