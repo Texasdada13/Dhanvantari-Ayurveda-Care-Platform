@@ -131,7 +131,7 @@ export default function PortalPrintPage() {
                   <tr key={s.id as number}>
                     <td className="py-1.5 pr-3">
                       <span className="font-medium">{s.name as string}</span>
-                      {s.name_sanskrit && <span className="text-gray-500 italic ml-1">({s.name_sanskrit as string})</span>}
+                      {s.name_sanskrit ? <span className="text-gray-500 italic ml-1">({s.name_sanskrit as string})</span> : null}
                     </td>
                     <td className="py-1.5 pr-3 text-gray-600">{(s.dose as string) || "—"}</td>
                     <td className="py-1.5 pr-3 text-gray-600">{(s.timing as string) || "—"}</td>
@@ -154,22 +154,22 @@ export default function PortalPrintPage() {
                 <div key={r.id as number} className="border rounded-lg p-3 print:p-2 space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm">{r.name as string}</span>
-                    {(r.meal_type || r.meal_slot) && (
+                    {(r.meal_type || r.meal_slot) ? (
                       <span className="text-xs text-gray-500">({[r.meal_type, r.meal_slot].filter(Boolean).join(" · ")})</span>
-                    )}
+                    ) : null}
                   </div>
-                  {r.ingredients && (
+                  {r.ingredients ? (
                     <div>
                       <p className="text-xs text-gray-500 font-medium">Ingredients</p>
                       <p className="text-sm whitespace-pre-wrap">{r.ingredients as string}</p>
                     </div>
-                  )}
-                  {r.instructions && (
+                  ) : null}
+                  {r.instructions ? (
                     <div>
                       <p className="text-xs text-gray-500 font-medium">Instructions</p>
                       <p className="text-sm whitespace-pre-wrap">{r.instructions as string}</p>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               ))}
             </div>

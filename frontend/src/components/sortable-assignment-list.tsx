@@ -35,13 +35,13 @@ interface AssignmentItem {
 interface SortableAssignmentListProps {
   items: AssignmentItem[];
   onReorder: (ids: number[]) => void;
-  onEdit: (id: number) => void;
+  onEdit?: (id: number) => void;
   onRemove: (id: number) => void;
 }
 
 // ── Dropdown Menu ───────────────────────────────────────────────────────────
 
-function ContextMenu({ onEdit, onRemove }: { onEdit: () => void; onRemove: () => void }) {
+function ContextMenu({ onEdit, onRemove }: { onEdit?: () => void; onRemove: () => void }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -56,12 +56,14 @@ function ContextMenu({ onEdit, onRemove }: { onEdit: () => void; onRemove: () =>
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full mt-1 z-50 bg-card border rounded-lg shadow-lg py-1 min-w-[120px]">
+            {onEdit && (
             <button
               onClick={() => { onEdit(); setOpen(false); }}
               className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted flex items-center gap-2"
             >
               <Pencil className="size-3" /> Edit
             </button>
+            )}
             <button
               onClick={() => { onRemove(); setOpen(false); }}
               className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted text-destructive flex items-center gap-2"
@@ -83,7 +85,7 @@ function SortableCard({
   onRemove,
 }: {
   item: AssignmentItem;
-  onEdit: () => void;
+  onEdit?: () => void;
   onRemove: () => void;
 }) {
   const {
@@ -167,7 +169,7 @@ export default function SortableAssignmentList({
             <SortableCard
               key={item.id}
               item={item}
-              onEdit={() => onEdit(item.id)}
+              onEdit={onEdit ? () => onEdit(item.id) : undefined}
               onRemove={() => onRemove(item.id)}
             />
           ))}
